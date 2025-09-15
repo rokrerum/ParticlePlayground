@@ -163,5 +163,6 @@ while True:
     while len(particles) < 100000:
         particles.append(Particle(random.randint(200,400), random.randint(200,400), [0, 0], "white", [random.choice(["n", "s"]), random.choice(["w", "e"])], "dust", int(time.time()) + 20))
 
+    time.sleep(0.07)
     mainWindow.draw(particles)
     pygame.display.update()
