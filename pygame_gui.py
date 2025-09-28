@@ -16,33 +16,27 @@ class Gui:
         surface.blit(textobj, textrect)
        
        
-       
 class button:
     def __init__(self, size, text, font, color, display):
-        self.rect = pygame.Rect(size)
+        self.rect = pygame.Rect(size[0], size[1], size[2], size[3])
         self.text = text
         self.font = font
         self.color = color
         self.display = display
-        
+
     
     def add_button(self):
         pygame.draw.rect(self.display, self.color, self.rect)
         Gui.draw_text(self.rect[0], self.rect[1], self.text, self.font, (100, 100, 100), self.display)
         
     
-    def button_press(self, surface):
+    def button_press(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            # If the user clicked on the input_box rect.
+            if self.rect.collidepoint(event.pos):
+                return self.text
 
-        
-        for event in pygame.event.get():
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                # If the user clicked on the input_box rect.
-                if self.rect.collidepoint(event.pos):
-                    print("button clicked")
-                    pass 
                     
-    
-
 class InputBox:
     def __init__(self, x, y, w, h, var_name, text=''):
         self.rect = pygame.Rect(x, y, w, h)
