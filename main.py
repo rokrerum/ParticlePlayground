@@ -13,7 +13,7 @@ class MainWindow:
     def __init__(self, width, height):
         self.width=width
         self.height=height
-        self.menu = "options"
+        self.menu = "particle_selection"
         self.input_boxes = []
         self.input_buttons = []
         self.display = pygame.display.set_mode((self.width,self.height))
@@ -33,14 +33,21 @@ class MainWindow:
         pygame.draw.rect(self.display, (20, 20, 80), (self.width - 200, 0, 200, self.height))
         for ind, particle in enumerate(partile_types):
             ind += 1
-            self.input_buttons.append(button((self.width - 200, 20 * ind, 20, 20), particle, self.font, (22, 160, 160), self.display))
+            self.input_buttons.append(button((self.width - 200, 20 * ind, 60, 20), particle, self.font, (22, 160, 160), self.display))
             self.input_buttons[-1].add_button()
 
 
     def setings_menu(self): ## need to add menu button and restart button
+        button = pygame_gui.button
         running = True
         Gui = pygame_gui.Gui
         pygame.draw.rect(self.display, (20, 20, 80), (self.width - 200, 0, 200, self.height))
+        self.input_buttons.append(button((self.width - 200, 20, 60, 20), "particles", self.font, (22, 160, 160), self.display))
+        self.input_buttons[-1].add_button()
+        
+        self.input_buttons.append(button((self.width - 100, 20, 60, 20), "remove particles", self.font, (22, 160, 160), self.display))
+        self.input_buttons[-1].add_button()
+        
         Gui.draw_text(self.width - 200, 55, "amount", self.font, (22, 160, 160), self.display)
         input_box1 = pygame_gui.InputBox(self.width - 200, 70, 120, 20, "amount")
 
@@ -67,18 +74,15 @@ class MainWindow:
         pass
 
 
-
-spawn_area = \
-    {
+spawn_area = {
     "xstart": 200,
     "xend": 500,
     "ystart": 200,
     "yend": 500,
     }
 
-particle_info = \
-    {
-    "amount": 1000,
+particle_info = {
+    "amount": 6,
     "speed": [0, 0],
     "color": (22, 200, 100),
     "direction": None,
@@ -89,7 +93,7 @@ particle_info = \
 partile_types = [
     "dust",
     "fireworks"
-]
+    ]
        
 particle_data = particle.Particle
 mainWindow = MainWindow(900,600)
@@ -105,6 +109,37 @@ while True:
             sys.exit()
         for box in input_boxes:
             box.handle_event(event)
+        for button in input_buttons:
+            button_action = button.button_press(event)
+            
+            if button_action:
+                if button_action in ["dust", "fireworks"]:
+                    mainWindow.input_buttons = []
+                    if button_action == "dust":
+                        particle_info["type"] = "dust"
+                        mainWindow.setings_menu()
+                    elif button_action == "fireworks":
+                        particle_info["type"] = "fireworks"
+                        mainWindow.setings_menu()
+                        
+                    mainWindow.menu = "particle_menu"
+                    input_buttons = mainWindow.input_buttons
+                    input_boxes = mainWindow.input_boxes
+                    
+                elif button_action in ["remove particles", "particles"]:
+                    if button_action == "remove particles":
+                        particles = []
+                        
+                    elif button_action == "particles":
+                        mainWindow.menu = "particle_selection"
+                        mainWindow.input_buttons = []
+                        mainWindow.input_boxes = []
+                        mainWindow.particle_menu(partile_types)
+                        input_boxes = mainWindow.input_boxes
+                        input_buttons = mainWindow.input_buttons
+                        
+                    
+                
        
     for ind, particle in enumerate(particles):
         if particle.life_span <= time.time():
@@ -114,7 +149,7 @@ while True:
    
     for box in input_boxes:
         box.draw(display)
-        if box.submitted is not None:
+        if box.submitted is not None: #this checks if any value was change in input boxes
             if box.var_name == "amount":
                 particle_info["amount"] = int(box.submitted)
                 
@@ -133,16 +168,21 @@ while True:
             elif box.var_name == "yend":
                 spawn_area["yend"] = int(box.submitted)
     
-    for button in input_buttons:
-        pass
-
-   
-    while len(particles) < particle_info["amount"]:
-        particles.append(particle_data(random.randint(spawn_area["xstart"], spawn_area["xend"]), random.randint(spawn_area["ystart"], spawn_area["yend"]),\
-            particle_info["speed"], particle_info["color"],\
-           [random.choice(["n", "s"]), random.choice(["w", "e"])],\
-           particle_info["type"], int(time.time()) + particle_info["life_span"]))
-
+    if mainWindow.menu != "particle_selection":
+        if particle_info["type"] == "dust":
+            while len(particles) < particle_info["amount"]:
+                particles.append(particle_data(random.randint(spawn_area["xstart"], spawn_area["xend"]), random.randint(spawn_area["ystart"], spawn_area["yend"]),\
+                particle_info["speed"], particle_info["color"],\
+                [random.choice(["n", "s"]), random.choice(["w", "e"])],\
+                particle_info["type"], int(time.time()) + particle_info["life_span"]))
+                
+        elif particle_info["type"] == "fireworks":
+            while len(particles) < particle_info["amount"]:
+                particles.append(particle_data(random.randint(spawn_area["xstart"], spawn_area["xend"]), mainWindow.height,\
+                particle_info["speed"], particle_info["color"],\
+                [random.choice(["n", "s"]), random.choice(["w", "e"])],\
+                particle_info["type"], int(time.time()) + particle_info["life_span"]))
+                
     time.sleep(0.09)
     mainWindow.draw(particles)
     pygame.display.update()
