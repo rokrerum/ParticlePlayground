@@ -7,7 +7,7 @@ import pygame_gui
 import particle
 
 pygame.init()
-
+clock = pygame.time.Clock()
 
 class MainWindow:
     def __init__(self, width, height):
@@ -22,9 +22,12 @@ class MainWindow:
 
     def draw(self, particles):
         pygame.draw.rect(self.display, (0, 0, 0), (0, 0, self.width - 200, self.height))
-        for i in particles:
-            pygame.draw.rect(self.display, (22, 200, 100), (i.x, i.y, 2, 2))
-           
+        for particle_ in particles:
+            if len(particle_.extra_particles) == 0:
+                pygame.draw.rect(self.display, particle_.color, (particle_.x, particle_.y, 2, 2))
+            else:
+                for p in particle_.extra_particles:
+                    pygame.draw.rect(self.display, p.color, (p.x, p.y, 2, 2))
         pygame.display.update()  
    
    
@@ -87,7 +90,7 @@ particle_info = {
     "color": (22, 200, 100),
     "direction": None,
     "type": "dust",
-    "life_span": 20
+    "life_span": 6
     }
     
 partile_types = [
@@ -95,7 +98,7 @@ partile_types = [
     "fireworks"
     ]
        
-particle_data = particle.Particle
+
 mainWindow = MainWindow(900,600)
 mainWindow.particle_menu(partile_types)
 particles = []
@@ -109,10 +112,10 @@ while True:
             sys.exit()
         for box in input_boxes:
             box.handle_event(event)
-        for button in input_buttons:
-            button_action = button.button_press(event)
             
-            if button_action:
+        for button in input_buttons:  #this is handler for buttons for operating eavents of buttons
+            button_action = button.button_press(event)
+            if button_action: 
                 if button_action in ["dust", "fireworks"]:
                     mainWindow.input_buttons = []
                     if button_action == "dust":
@@ -141,11 +144,11 @@ while True:
                     
                 
        
-    for ind, particle in enumerate(particles):
-        if particle.life_span <= time.time():
+    for ind, particle_ in enumerate(particles):
+        if particle_.life_span <= time.time():
             particles.pop(ind)
         else:
-            particles[ind] = particle.change()
+            particles[ind] = particle_.change()
    
     for box in input_boxes:
         box.draw(display)
@@ -168,21 +171,23 @@ while True:
             elif box.var_name == "yend":
                 spawn_area["yend"] = int(box.submitted)
     
-    if mainWindow.menu != "particle_selection":
+    if mainWindow.menu != "particle_selection": # this is for adding particle
         if particle_info["type"] == "dust":
+            particle_data = particle.Dust
             while len(particles) < particle_info["amount"]:
-                particles.append(particle_data(random.randint(spawn_area["xstart"], spawn_area["xend"]), random.randint(spawn_area["ystart"], spawn_area["yend"]),\
-                particle_info["speed"], particle_info["color"],\
-                [random.choice(["n", "s"]), random.choice(["w", "e"])],\
-                particle_info["type"], int(time.time()) + particle_info["life_span"]))
+                particles.append(particle_data(random.randint(spawn_area["xstart"], spawn_area["xend"]), random.randint(spawn_area["ystart"], spawn_area["yend"]),
+                particle_info["speed"], particle_info["color"],
+                [random.choice(["n", "s"]), random.choice(["w", "e"])],
+                int(time.time()) + particle_info["life_span"]))
                 
         elif particle_info["type"] == "fireworks":
+            particle_data = particle.Fireworks
             while len(particles) < particle_info["amount"]:
-                particles.append(particle_data(random.randint(spawn_area["xstart"], spawn_area["xend"]), mainWindow.height,\
-                particle_info["speed"], particle_info["color"],\
-                [random.choice(["n", "s"]), random.choice(["w", "e"])],\
-                particle_info["type"], int(time.time()) + particle_info["life_span"]))
+                particles.append(particle_data(random.randint(spawn_area["xstart"], spawn_area["xend"]), mainWindow.height,
+                particle_info["speed"], particle_info["color"],
+                ["n", random.choice(["w", "e"])],
+                int(time.time()) + particle_info["life_span"]))
                 
-    time.sleep(0.09)
+    clock.tick(60)
     mainWindow.draw(particles)
     pygame.display.update()
