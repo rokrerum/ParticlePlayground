@@ -87,7 +87,7 @@ spawn_area = {
 particle_info = {
     "amount": 6,
     "speed": [0, 0],
-    "color": (22, 200, 100),
+    "color": (22, 250, 100),
     "direction": None,
     "type": "dust",
     "life_span": 6
@@ -95,7 +95,8 @@ particle_info = {
     
 partile_types = [
     "dust",
-    "fireworks"
+    "fireworks",
+    "snow"
     ]
        
 
@@ -116,13 +117,18 @@ while True:
         for button in input_buttons:  #this is handler for buttons for operating eavents of buttons
             button_action = button.button_press(event)
             if button_action: 
-                if button_action in ["dust", "fireworks"]:
+                if button_action in ["dust", "fireworks", "snow"]:
                     mainWindow.input_buttons = []
                     if button_action == "dust":
                         particle_info["type"] = "dust"
                         mainWindow.setings_menu()
+                        
                     elif button_action == "fireworks":
                         particle_info["type"] = "fireworks"
+                        mainWindow.setings_menu()
+                        
+                    elif button_action == "snow":
+                        particle_info["type"] = "snow"
                         mainWindow.setings_menu()
                         
                     mainWindow.menu = "particle_menu"
@@ -185,8 +191,13 @@ while True:
             while len(particles) < particle_info["amount"]:
                 particles.append(particle_data(random.randint(spawn_area["xstart"], spawn_area["xend"]), mainWindow.height,
                 particle_info["speed"], particle_info["color"],
-                ["n", random.choice(["w", "e"])],
                 int(time.time()) + particle_info["life_span"]))
+                
+        elif particle_info["type"] == "snow":
+            particle_data = particle.Snow
+            while len(particles) < particle_info["amount"]:
+                particles.append(particle_data(random.randint(spawn_area["xstart"], spawn_area["xend"]), 0,
+                particle_info["speed"], particle_info["color"]))
                 
     clock.tick(60)
     mainWindow.draw(particles)
