@@ -1,6 +1,7 @@
 import random
 import math
 import time
+import numpy as np
 
 
 class Particle:  # base class for all porticles
@@ -22,36 +23,15 @@ class Particle:  # base class for all porticles
 
 
 class Dust:
-    def __init__(self, x, y, speed, color, direction, life_span):
-        self.x = x
-        self.y = y
-        self.speed = speed
-        self.color = color
-        self.direction = direction
-        self.life_span = life_span
-        self.extra_particles = []
+    def change(positions, speeds, life_spans, colors, angle, amount):  # this will change direction and speed in paraler to it
+        #filter = life_spans[:] <= 0
+        chance = np.random.rand(amount) < 0.01
+        angle[chance] = random.random() * 2 * math.pi
 
-    def change(self):  # this will change direction and speed in paraler to it
-        # this is for changing diretctin of mevment of particles
-        rand = random.randint(0, 10)
-        if rand == 10:
-            self.direction = [random.choice(["n", "s"]), random.choice(["w", "e"])]
+        positions[:, 0] += np.cos(angle) * speeds[:]
+        positions[:, 1] += np.sin(angle) * speeds[:]
 
-        speed_change = [0, 0]
-        if self.direction[0] == "n":
-            speed_change[0] = random.randint(-2, -1) if self.speed[0] >= 3 else random.randint(1, 2)
-        else:
-            speed_change[0] = random.randint(1, 2) if self.speed[0] <= -3 else random.randint(-2, -1)
-
-        if self.direction[1] == "w":
-            speed_change[1] = random.randint(-2, -1) if self.speed[1] >= 3 else random.randint(1, 2)
-        else:
-            speed_change[1] = random.randint(1, 2) if self.speed[1] <= -3 else random.randint(-2, -1)
-
-        self.speed = [self.speed[0] + speed_change[0], self.speed[1] + speed_change[1]]
-        self.x = self.x + self.speed[0]
-        self.y = self.y + self.speed[1]
-        return self
+        return positions, speeds, life_spans, colors, angle
 
 
 class Fireworks:
