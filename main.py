@@ -8,6 +8,7 @@ import particle
 import keyboard
 import json
 import numpy as np
+import math
 
 pygame.init()
 clock = pygame.time.Clock()
@@ -22,15 +23,17 @@ class MainWindow:
         self.display = pygame.display.set_mode((self.width, self.height))
         self.font = pygame.font.SysFont(None, 20)
 
-    def draw(self, particles):
+    def draw(self, positions, speeds, life_spans, colors, angle):
         pygame.draw.rect(self.display, (0, 0, 0), (0, 0, self.width - 200, self.height))
-        for particle_ in particles:
-            if particle_ is not None:
-                if len(particle_.extra_particles) == 0:
-                    pygame.draw.rect(self.display, particle_.color, (particle_.x, particle_.y, 2, 2))
-                else:
-                    for p in particle_.extra_particles:
-                        pygame.draw.rect(self.display, p.color, (p.x, p.y, 2, 2))
+        if positions[0].any() != 0:
+            screen_array = pygame.surfarray.pixels2d(self.display)
+            kolor_int = (colors[:, 0].astype(int) << 16) + (colors[:, 1].astype(int) << 8) + colors[:, 2].astype(int)
+
+            x = np.clip(positions[:, 0].astype(int), 0, self.width - 201)
+            y = np.clip(positions[:, 1].astype(int), 0, self.height - 1)
+            screen_array[x, y] = kolor_int
+
+            del screen_array  # ważne! zwalnia blokadę surface
 
         pygame.display.update()
 
@@ -89,27 +92,28 @@ class MainWindow:
         pass
 
 def size_change(size):
-    pozycja = np.zeros((size, 2))  # amount of particles, x i y
-    predkosci = np.zeros((size, 2))
+    positions = np.zeros((size, 2))  # amount of particles, x i y
+    speeds = np.zeros(size)
     life_spans = np.zeros(size)
-    kolory = np.zeros((size, 3))  # r, g, b
+    colors = np.zeros((size, 3))  # r, g, b
+    angle = np.zeros(size)
     exploded = np.zeros((size, 2))
-    angle = np.zeros((size, 2))
     extra_particlesx = np.zeros((size, 20))
     extra_particlesy = np.zeros((size, 20))
     extra_particles_speed = np.zeros((size, 20))
     extra_particles_ang = np.zeros((size, 20)) #angle
-    return pozycja, predkosci, life_spans, kolory, exploded, angle
+    return positions, speeds, life_spans, colors, angle
 
-def info_change(particle, ind):
-    pozycja[ind] = particle.x, particle.y
-    predkosci[ind] = particle.speed
-    life_spans[ind] = particle.life_span
-    kolory[ind] = particle.color
-    #extra_particles[ind] = particle.extra_particles
-    if particle_type == "fireworks":
-        exploded[ind] = particle.exploded, particle.explode_y
-        angle[ind] = particle.dy, particle.dx
+def create_particle():
+    filter = life_spans[:] <= 0
+    life_spans[filter] = 8
+    positions[filter, 0] = np.random.randint(0, 400, particle_info['amount'])
+    positions[filter, 1] = np.random.randint(0, 400, particle_info['amount'])
+    speeds[filter] = 1
+    angle[filter] = np.random.random(particle_info['amount']) * (2 * math.pi)
+    colors[filter, 0] = 22
+    colors[filter, 1] = 222
+    colors[filter, 2] = 222
 
 
 particle_type = "dust"
@@ -129,15 +133,7 @@ input_buttons = mainWindow.input_buttons
 display = mainWindow.display
 time_ = 0
 stopped = False
-particles = []
-global pozycja  # amount of particles, x i y
-global predkosci
-global life_spans
-global kolory  # r, g, b
-global extra_particles
-global exploded
-global angle
-
+positions, speeds, life_spans, colors, angle = size_change(10)
 
 data_file = "user_settings.json" #name of file
 data = json.loads(open(data_file).read()) #loading data form files
@@ -175,15 +171,13 @@ while True:
                         if preset.get("type") == particle_type:
                             particle_info = preset["info"]
                             spawn_area = preset["spawn_area"]
-                    particles = np.empty(particle_info["amount"], dtype=object)
 
-                    pozycja, predkosci, life_spans, kolory, extra_particles, exploded, angle = size_change(100)
+                    positions, speeds, life_spans, colors, angle = size_change(particle_info['amount'])
 
 
                 elif button_action in ["remove particles", "particles", "save settings", "reset settings"]:
                     if button_action == "remove particles":
-                        particles = np.empty(particle_info["amount"], dtype=object)
-                        pozycja, predkosci, life_spans, kolory, extra_particles, exploded, angle = size_change(100)
+                        positions, speeds, life_spans, colors, angle = size_change(particle_info['amount'])
 
                     elif button_action == "particles":
                         mainWindow.menu = "particle_selection"
@@ -228,8 +222,7 @@ while True:
             if box.submitted is not None:  # this checks if any value was change in input boxes
                 if box.var_name == "amount":
                     particle_info["amount"] = int(box.submitted)
-                    particles = np.empty(particle_info["amount"], dtype=object)
-                    pozycja, predkosci, life_spans, kolory, extra_particles, exploded, angle = size_change(100)
+                    positions, speeds, life_spans, colors, angle = size_change(particle_info['amount'])
 
                 elif box.var_name == "life span":
                     particle_info["life_span"] = int(box.submitted)
@@ -247,30 +240,16 @@ while True:
                     spawn_area["yend"] = int(box.submitted)
                 box.submitted = None #removes value form submitted so this will stop changing the value over and over
 
-        if not stopped: #adding particles
-            for ind, particle_ in enumerate(particles):
-                if particle_ == None or particle_.life_span <= time.time():
-                    if particle_type == "dust":
-                        particle_data = particle.Dust
-                        particle_selected = (particle_data(random.randint(spawn_area["xstart"], spawn_area["xend"]), random.randint(spawn_area["ystart"], spawn_area["yend"]), particle_info["speed"], particle_info["color"], [random.choice(["n", "s"]), random.choice(["w", "e"])], int(time.time()) + particle_info["life_span"]))
+        if not stopped:
+            if life_spans[0] <= 0:#adding particles
+                create_particle()
 
-                    elif particle_type == "fireworks":
-                        particle_data = particle.Fireworks
-                        particle_selected = particle_data(random.randint(spawn_area["xstart"], spawn_area["xend"]),mainWindow.height,particle_info["speed"], particle_info["color"],int(time.time()) + particle_info["life_span"])
 
-                    elif particle_type == "snow": # to change
-                        particle_data = particle.Snow
-                        if (particle_ is None and time.time() > time_):
-                            time_ = time.time() + (5 / particle_info["amount"])
-                            particles[ind] = (particle_data(random.randint(spawn_area["xstart"], spawn_area["xend"]), 0, particle_info["speed"], particle_info["color"]))
-
-                    particles[ind] = particle_selected
-
-                else:
-                    particles[ind] = particle_.change()
+            if particle_type == "dust":#changing particles
+                particle.Dust.change(positions, speeds, life_spans, colors, angle, particle_info['amount'])
 
     clock.tick(60)
-    mainWindow.draw(particles)
+    mainWindow.draw(positions, speeds, life_spans, colors, angle)
     pygame.display.update()
 
 #made by rokrerum
