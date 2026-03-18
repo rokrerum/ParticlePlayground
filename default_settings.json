@@ -1,0 +1,68 @@
+[
+  {
+    "type": "dust",
+    "info": {
+      "amount": 10,
+      "speed": [0, 0],
+      "direction": 0,
+      "life_span": 6,
+      "color": [
+        22,
+        250,
+        100
+      ]
+    },
+    "spawn_area": {
+      "xstart": 200,
+      "xend": 500,
+      "ystart": 200,
+      "yend": 500
+    }
+  },
+
+
+  {
+    "type": "fireworks",
+    "info": {
+      "amount": 6,
+      "speed": 0,
+      "direction": 0,
+      "life_span": 6,
+      "color": [
+        22,
+        250,
+        100
+      ]
+    },
+    "spawn_area": {
+      "xstart": 200,
+      "xend": 500,
+      "ystart": 200,
+      "yend": 500
+    }
+  },
+
+
+  {
+    "type": "snow",
+    "info": {
+      "amount": 500,
+      "speed": 0,
+      "direction": 0,
+      "life_span": 6,
+      "color": [
+        22,
+        250,
+        100
+      ]
+    },
+    "spawn_area": {
+      "xstart": 200,
+      "xend": 500,
+      "ystart": 200,
+      "yend": 500
+    }
+  }
+]
+
+
