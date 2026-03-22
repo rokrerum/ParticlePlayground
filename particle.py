@@ -19,7 +19,7 @@ class Fireworks:
     def __init__(self):
         self.sparks=20
 
-    def change(self, positions, speeds, life_spans, colors, angle, amount, exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle):
+    def change(self, positions, speeds, life_spans, colors, angle, amount, exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour):
         explod = (positions[:, 1] <= explodey[:]) & (exploded[:] == 0)
         if explod.any():
             self.explode(positions, speeds, life_spans, colors, angle, amount, exploded ,explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle)
@@ -27,68 +27,37 @@ class Fireworks:
 
         if exploded.any() == 1:
             spark = Sparks()
-            spark.change(exploded ,explodey, extra_particlesx, extra_particlesy)
+            life_spans, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour = spark.change(life_spans, exploded, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour)
 
         positions[:, 0] += np.cos(angle) * speeds[:]
         positions[:, 1] += np.sin(angle) * speeds[:]
-
         return positions, speeds, life_spans, colors, angle, amount, exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle
 
 
     def explode(self, positions, speeds, life_spans, colors, angle, amount, exploded ,explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle):
         filter = (positions[:, 1] <= explodey[:]) & (exploded[:] == 0)
-        angle_part = (2 * math.pi) / amount
-        extra_particlesx[filter] = positions[filter, 0]
-        extra_particlesy[filter] = positions[filter, 1]
-        extra_particles_angle[filter] = 0
-        print("S")
-#    def change(self):
-#        if self.explode_y < self.y:
-#            speed_change = [0, -1]
-#            self.speed = [self.speed[0] + speed_change[0], self.speed[1] + speed_change[1]]
-#            self.x = self.x + self.speed[0]
-#            self.y = self.y + self.speed[1]
-#
-#        elif len(self.extra_particles) > 1:
-#            for spark in self.extra_particles:
-#                spark.change()
-#
-#        elif not self.exploded:
-#            self.exploded = True
-#            self.explode()
-#
-#        else:
-#            self.life_span = 0
-#        return self
-
-#    def explode(self, amount=20):
-#        angle_part = (2 * math.pi) / amount
-#        for i in range(amount):
-#           angle = angle_part * i
-#           self.extra_particles.append(Sparks(self.x, self.y, 3, (250, 200, 200), angle, 20))
+        angle_part = (2 * math.pi) / self.sparks
+        extra_particlesx[filter] = positions[filter, 0:1]
+        extra_particlesy[filter] = positions[filter, 1:2]
+        extra_particles_angle[filter, :] = np.arange(self.sparks) * angle_part
 
 
 class Sparks:
     def __init__(self):
         pass
 
-    def change(self, exploded ,explodey, extra_particlesx, extra_particlesy):
+    def change(self, life_spans, exploded, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour):
         speed_change = 0
 
-        #self.speed = self.speed * self.resistance
-        #self.dy, self.dx = self.dy * self.resistance, self.dx * self.resistance
-        #self.dy += 0.03
-        #self.x += self.dx
-        #self.y += self.dy
-        #self.fade()
+        exploded = exploded[:] == 1
+        extra_particlesx[exploded, :] += np.cos(extra_particles_angle[exploded,:]) * 2
+        extra_particlesy[exploded, :] += (np.sin(extra_particles_angle[exploded,:]) * 2) + 0.03
+        extra_particles_colour[exploded, :] = abs(extra_particles_colour[exploded] - 1) #fadeing of  particles
 
-        return
+        vanished = (extra_particles_colour == 0).all(axis=1) #checks if all numbers in row are 0
+        life_spans[vanished] = 0
 
-    def fade(self):
-        self.color = (abs(self.color[0] - 1), abs(self.color[1] - 1), abs(self.color[2] - 1))
-
-        if self.color[0] == 0 and self.color[1] == 0 and self.color[2] == 0:
-            self.life_span = 0
+        return life_spans, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour
 
 
 class Snow:

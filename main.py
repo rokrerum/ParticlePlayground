@@ -25,17 +25,26 @@ class MainWindow:
 
     def draw(self, positions, speeds, life_spans, colors, angle):
         pygame.draw.rect(self.display, (0, 0, 0), (0, 0, self.width - 200, self.height))
+        existing = exploded[:] == 0
         if positions[0].any() != 0:
             screen_array = pygame.surfarray.pixels2d(self.display)
             kolor_int = (colors[:, 0].astype(int) << 16) + (colors[:, 1].astype(int) << 8) + colors[:, 2].astype(int)
+            kolor_extra_int = (extra_particles_colour[:, 0].astype(int) << 16) + (extra_particles_colour[:, 1].astype(int) << 8) + extra_particles_colour[:, 2].astype(int)
 
-            x = np.clip(positions[:, 0].astype(int), 0, self.width - 201)
-            y = np.clip(positions[:, 1].astype(int), 0, self.height - 1)
-            screen_array[x, y] = kolor_int
+            x = np.clip(positions[existing, 0].astype(int), 0, self.width - 201)
+            y = np.clip(positions[existing, 1].astype(int), 0, self.height - 1)
+
+            xextra = np.clip(extra_particlesx[~existing, :].astype(int), 0, self.width - 201).flatten()
+            yextra = np.clip(extra_particlesy[~existing, :].astype(int), 0, self.height - 1).flatten()
+
+            kolory_powtorzone = np.repeat(kolor_extra_int[~existing], 20, axis=0)
+            screen_array[xextra, yextra] = kolory_powtorzone
+
+            screen_array[x, y] = kolor_int[existing]
 
             del screen_array
-
         pygame.display.update()
+
 
     def particle_menu(self, partile_types):
         button = pygame_gui.button
@@ -100,13 +109,14 @@ def size_change(size):
     return positions, speeds, life_spans, colors, angle
 
 def firework_size_change(size):
-    exploded = np.zeros(size)
+    exploded = np.full(size, 2)
     explodey = np.zeros(size) #on what y
     extra_particlesx = np.zeros((size, 20))
     extra_particlesy = np.zeros((size, 20))
     extra_particles_speed = np.zeros((size, 20))
     extra_particles_angle = np.zeros((size, 20))
-    return exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle
+    extra_particles_colour = np.zeros((size, 3))
+    return exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour
 
 def create_particle_dust():
     filter = life_spans[:] <= 0
@@ -122,7 +132,7 @@ def create_particle_dust():
 def create_particle_firework():
     filter = life_spans[:] <= 0
     life_spans[filter] = 8
-    positions[filter, 0] = np.random.randint(100, 500, particle_info['amount'])
+    positions[filter, 0] = np.random.randint(100, 500, filter.sum())
     positions[filter, 1] = 500
     speeds[filter] = 1
     angle[filter] =  math.pi * 1.5
@@ -130,11 +140,12 @@ def create_particle_firework():
     colors[filter, 1] = 222
     colors[filter, 2] = 222
     exploded[filter] = 0
-    explodey[filter] = np.random.randint(100, 300, particle_info['amount'])
-    extra_particlesx = 0
-    extra_particlesy = 0
-    extra_particles_speed = 1
-    extra_particles_angle = 0
+    explodey[filter] = np.random.randint(100, 300, filter.sum())
+    extra_particlesx[filter,:] = 0
+    extra_particlesy[filter,:] = 0
+    extra_particles_speed[filter] = 1
+    extra_particles_angle[filter] = 0
+    extra_particles_colour[filter,:]= 222
 
 particle_type = "dust"
 particle_info = {}
@@ -154,7 +165,7 @@ display = mainWindow.display
 time_ = 0
 stopped = False
 positions, speeds, life_spans, colors, angle = size_change(10)
-exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle = firework_size_change(10)
+exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour = firework_size_change(10)
 data_file = "user_settings.json" #name of file
 data = json.loads(open(data_file).read()) #loading data form files
 
@@ -193,13 +204,13 @@ while True:
                             spawn_area = preset["spawn_area"]
 
                     positions, speeds, life_spans, colors, angle = size_change(particle_info['amount'])
-                    exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle = firework_size_change(particle_info['amount'])
+                    exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour = firework_size_change(particle_info['amount'])
 
 
                 elif button_action in ["remove particles", "particles", "save settings", "reset settings"]:
                     if button_action == "remove particles":
                         positions, speeds, life_spans, colors, angle = size_change(particle_info['amount'])
-                        exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle = firework_size_change(particle_info['amount'])
+                        exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour = firework_size_change(particle_info['amount'])
 
                     elif button_action == "particles":
                         mainWindow.menu = "particle_selection"
@@ -244,7 +255,7 @@ while True:
                 if box.var_name == "amount":
                     particle_info["amount"] = int(box.submitted)
                     positions, speeds, life_spans, colors, angle = size_change(particle_info['amount'])
-                    exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle = firework_size_change(particle_info['amount'])
+                    exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour = firework_size_change(particle_info['amount'])
 
                 elif box.var_name == "life span":
                     particle_info["life_span"] = int(box.submitted)
@@ -263,7 +274,7 @@ while True:
                 box.submitted = None #removes value form submitted so this will stop changing the value over and over
 
         if not stopped:
-            if life_spans.any() <= 0:
+            if (life_spans <= 0).any():
                 if particle_type == "dust":#adding particles
                     create_particle_dust()
                 elif particle_type == "fireworks":
@@ -272,8 +283,9 @@ while True:
             fireworks = particle.Fireworks()
             if particle_type == "dust":#changing particles
                 particle.Dust.change(positions, speeds, life_spans, colors, angle, particle_info['amount'])
+
             elif particle_type == "fireworks":
-                fireworks.change(positions, speeds, life_spans, colors, angle, particle_info['amount'], exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle)
+                fireworks.change(positions, speeds, life_spans, colors, angle, particle_info['amount'], exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour)
 
 
     clock.tick(60)
