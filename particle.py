@@ -3,61 +3,120 @@ import math
 import time
 import numpy as np
 
+class ParticleData:
+    def __init__(self, size = 1):
+        self.positions = np.zeros((size, 2))  # amount of particles, x i y
+        self.speeds = np.zeros(size)
+        self.life_spans = np.zeros(size)
+        self.colors = np.zeros((size, 3))  # r, g, b
+        self.angle = np.zeros(size)
+        self.exploded = np.full(size, 0)
+        self.explodey = np.zeros(size)  # on what y
+        self.extra_particlesx = np.zeros((size, 20))
+        self.extra_particlesy = np.zeros((size, 20))
+        self.extra_particles_speed = np.zeros((size, 20))
+        self.extra_particles_angle = np.zeros((size, 20))
+        self.extra_particles_colour = np.zeros((size, 3))
+
+    def size_change(self, size):
+        self.positions = np.zeros((size, 2))  # amount of particles, x i y
+        self.speeds = np.zeros(size)
+        self.life_spans = np.zeros(size)
+        self.colors = np.zeros((size, 3))  # r, g, b
+        self.angle = np.zeros(size)
+
+    def firework_size_change(self, size):
+        self.exploded = np.full(size, 0)
+        self.explodey = np.zeros(size)  # on what y
+        self.extra_particlesx = np.zeros((size, 20))
+        self.extra_particlesy = np.zeros((size, 20))
+        self.extra_particles_speed = np.zeros((size, 20))
+        self.extra_particles_angle = np.zeros((size, 20))
+        self.extra_particles_colour = np.zeros((size, 3))
+
+    def create_particle_dust(self, size):
+        filter = self.life_spans[:] <= 0
+        self.life_spans[filter] = 8
+        self.positions[filter, 0] = np.random.randint(0, 400, size)
+        self.positions[filter, 1] = np.random.randint(0, 400, size)
+        self.speeds[filter] = 1
+        self.angle[filter] = np.random.random(size) * (2 * math.pi)
+        self.colors[filter, 0] = 22
+        self.colors[filter, 1] = 222
+        self.colors[filter, 2] = 222
+
+    def create_particle_firework(self):
+        filter = self.life_spans[:] <= 0
+        self.life_spans[filter] = 8
+        self.positions[filter, 0] = np.random.randint(100, 500, filter.sum())
+        self.positions[filter, 1] = 500
+        self.speeds[filter] = 1
+        self.angle[filter] = math.pi * 1.5
+        self.colors[filter, 0] = 22
+        self.colors[filter, 1] = 222
+        self.colors[filter, 2] = 222
+        self.exploded[filter] = 0
+        self.explodey[filter] = np.random.randint(100, 300, filter.sum())
+        self.extra_particlesx[filter, :] = 0
+        self.extra_particlesy[filter, :] = 0
+        self.extra_particles_speed[filter] = 1
+        self.extra_particles_angle[filter] = 0
+        self.extra_particles_colour[filter, :] = 222
+
+
 class Dust:
-    def change(positions, speeds, life_spans, colors, angle, amount):  # this will change direction and speed in paraler to it
+    def change(particles, size):  # this will change direction and speed in paraler to it
         #filter = life_spans[:] <= 0
-        chance = np.random.rand(amount) < 0.01
-        angle[chance] = random.random() * 2 * math.pi
+        chance = np.random.rand(size) < 0.01
+        particles.angle[chance] = random.random() * 2 * math.pi
 
-        positions[:, 0] += np.cos(angle) * speeds[:]
-        positions[:, 1] += np.sin(angle) * speeds[:]
+        particles.positions[:, 0] += np.cos(particles.angle) * particles.speeds[:]
+        particles.positions[:, 1] += np.sin(particles.angle) * particles.speeds[:]
 
-        return positions, speeds, life_spans, colors, angle
+        return particles
 
 
 class Fireworks:
     def __init__(self):
         self.sparks=20
 
-    def change(self, positions, speeds, life_spans, colors, angle, amount, exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour):
-        explod = (positions[:, 1] <= explodey[:]) & (exploded[:] == 0)
-        if explod.any():
-            self.explode(positions, speeds, life_spans, colors, angle, amount, exploded ,explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle)
-            exploded[explod] = 1
+    def change(self, particles, size):
+        exploded_check = (particles.positions[:, 1] <= particles.explodey[:]) & (particles.exploded[:] == 0)
+        if exploded_check.any():
+            self.explode(particles, size)
+            particles.exploded[exploded_check] = 1
 
-        if exploded.any() == 1:
+        if particles.exploded.any() == 1:
             spark = Sparks()
-            life_spans, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour = spark.change(life_spans, exploded, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour)
+            particles = spark.change(particles, size)
 
-        positions[:, 0] += np.cos(angle) * speeds[:]
-        positions[:, 1] += np.sin(angle) * speeds[:]
-        return positions, speeds, life_spans, colors, angle, amount, exploded, explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle
+        particles.positions[:, 0] += np.cos(particles.angle) * particles.speeds[:]
+        particles.positions[:, 1] += np.sin(particles.angle) * particles.speeds[:]
+        return particles
 
 
-    def explode(self, positions, speeds, life_spans, colors, angle, amount, exploded ,explodey, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle):
-        filter = (positions[:, 1] <= explodey[:]) & (exploded[:] == 0)
+    def explode(self, particles, size):
+        filter = (particles.positions[:, 1] <= particles.explodey[:]) & (particles.exploded[:] == 0)
         angle_part = (2 * math.pi) / self.sparks
-        extra_particlesx[filter] = positions[filter, 0:1]
-        extra_particlesy[filter] = positions[filter, 1:2]
-        extra_particles_angle[filter, :] = np.arange(self.sparks) * angle_part
+        particles.extra_particlesx[filter] = particles.positions[filter, 0:1]
+        particles.extra_particlesy[filter] = particles.positions[filter, 1:2]
+        particles.extra_particles_angle[filter, :] = np.arange(self.sparks) * angle_part
 
 
 class Sparks:
     def __init__(self):
         pass
 
-    def change(self, life_spans, exploded, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour):
-        speed_change = 0
+    def change(self, particles, size):
+        exploded = particles.exploded[:] == 1
+        particles.extra_particlesx[exploded, :] += np.cos(particles.extra_particles_angle[exploded,:]) * 2
+        particles.extra_particlesy[exploded, :] += (np.sin(particles.extra_particles_angle[exploded,:]) * 2) + 0.03
+        particles.extra_particles_colour[exploded, :] = abs(particles.extra_particles_colour[exploded] - 1) #fadeing of  particles
 
-        exploded = exploded[:] == 1
-        extra_particlesx[exploded, :] += np.cos(extra_particles_angle[exploded,:]) * 2
-        extra_particlesy[exploded, :] += (np.sin(extra_particles_angle[exploded,:]) * 2) + 0.03
-        extra_particles_colour[exploded, :] = abs(extra_particles_colour[exploded] - 1) #fadeing of  particles
+        vanished = (particles.extra_particles_colour == 0).all(axis=1) #checks if all numbers in row are 0 and if they are particle is not visible
+        particles.life_spans[vanished] = 0
 
-        vanished = (extra_particles_colour == 0).all(axis=1) #checks if all numbers in row are 0
-        life_spans[vanished] = 0
-
-        return life_spans, extra_particlesx, extra_particlesy, extra_particles_speed, extra_particles_angle, extra_particles_colour
+        return particles
 
 
 class Snow:
