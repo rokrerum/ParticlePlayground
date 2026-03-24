@@ -234,15 +234,24 @@ while True:
             if (particles.life_spans <= 0).any():
                 if particle_type == "dust":#adding particles
                     particles.create_particle_dust(particle_info['amount'])
+
                 elif particle_type == "fireworks":
                     particles.create_particle_firework()
 
+                elif particle_type == "snow":
+                    if np.random.rand() < 0.3:
+                        particles.create_particle_snow(particle_info['amount'])
+
             fireworks = particle.Fireworks()
+            snow = particle.Snow()
             if particle_type == "dust":#changing particles
                 particles = particle.Dust.change(particles, particle_info['amount'])
 
             elif particle_type == "fireworks":
                 particles = fireworks.change(particles, particle_info['amount'])
+
+            elif particle_type == "snow":
+                particles = snow.change(particles, particle_info['amount'], mainWindow.height)
 
 
     clock.tick(60)

@@ -63,6 +63,18 @@ class ParticleData:
         self.extra_particles_angle[filter] = 0
         self.extra_particles_colour[filter, :] = 222
 
+    def create_particle_snow(self, size):
+        filter = self.life_spans[:] <= 0
+        if filter.any():
+            free_space = np.argmax(filter)
+            self.life_spans[free_space] = 1
+            self.positions[free_space] = [np.random.randint(0, 700), 0]
+            self.speeds[free_space] = 1
+            self.angle[free_space] = random.uniform(0.3, 0.6) * math.pi
+            self.colors[free_space, 0] = 255
+            self.colors[free_space, 1] = 255
+            self.colors[free_space, 2] = 255
+
 
 class Dust:
     def change(particles, size):  # this will change direction and speed in paraler to it
@@ -120,30 +132,21 @@ class Sparks:
 
 
 class Snow:
-    def __init__(self, x, y, speed, color):
-        self.x = x
-        self.y = y
-        self.speed = 1
-        self.color = color
-        self.angle = random.uniform(math.pi * 0.3, math.pi * 0.6)
-        self.extra_particles = []
-        self.life_span = int(time.time()) + 500
-        self.dx = 0
-        self.dy = 0
+    def __init__(self):
+        pass
 
-    def change(self):
-        # speed_change = 0
-        rand = random.randint(0, 100)
-        if rand == 100:
-            self.angle = random.uniform(math.pi * 0.2, math.pi * 0.8)
-            print(self.angle)
+    def change(self, particles, size, hight):
+        filter = particles.life_spans <= 0
+        chance = (particles.life_spans[:] >= 0) & (np.random.rand(size) < 0.03)
 
-        self.dx = math.cos(self.angle) * self.speed
-        self.dy = math.sin(self.angle) * self.speed
+        particles.angle[chance] += (random.random() / 2) - 0.25
 
-        self.x += self.dx
-        self.y += self.dy
+        particles.positions[:, 0] += np.cos(particles.angle) * particles.speeds[:]
+        particles.positions[:, 1] += np.sin(particles.angle) * particles.speeds[:]
 
-        return self
+        not_visible = particles.positions[:, 1] > hight
+        particles.life_spans[not_visible] = 0
+
+        return particles
 
 #made by rokrerum
